@@ -39,21 +39,54 @@
               </v-toolbar>
               <v-card-text>
                 <v-form>
-                  <v-text-field
-                    id="input"
-                    label="Input"
-                    name="tokenIn"
-                    prepend-icon="mdi-import"
-                    type="number"
-                  ></v-text-field>
 
-                  <v-text-field
-                    id="ouput"
-                    label="Ouput"
-                    name="tokenOut"
-                    prepend-icon="mdi-export"
-                    type="number"
-                  ></v-text-field>
+                                     <v-container fluid>
+    <v-row align="center">
+      <v-col class="d-flex" cols="12" sm="8">
+        <v-text-field
+          id="input"
+          label="Input"
+          name="tokenIn"
+          prepend-icon="mdi-import"
+          type="number"
+        ></v-text-field>
+      </v-col>
+
+      <v-col class="d-flex" cols="12" sm="4">
+        <v-select
+          id="tokenIn"
+          :items="itemsIn"
+          label="Symbol"
+          hide-selected
+          @change="changeTokenIn"
+        ></v-select>
+      </v-col>
+
+    <v-col class="d-flex" cols="12" sm="8">
+        <v-text-field
+          id="ouput"
+          label="Ouput"
+          name="tokenOut"
+          prepend-icon="mdi-export"
+          type="number"
+        ></v-text-field>
+    </v-col>
+
+      <v-col class="d-flex" cols="12" sm="4">
+        <v-select
+          id="tokenOut"
+          :items="itemsOut"
+          @change="changeTokenOut"
+          hide-selected
+          label="Symbol"
+        ></v-select>
+      </v-col>
+    </v-row>
+  </v-container>
+  
+
+
+ 
                 </v-form>
               </v-card-text>
               <v-card-actions>
@@ -69,10 +102,65 @@
 </template>
 
 <script>
+import * as TokenListService from '@/services/TokenListService.js';
+// const abi = require(`@/abi/UniswapV2.json`)
+
   export default {
     name: 'Centered',
     props: {
       source: String,
+      web3: {
+        type: Object
+      }
     },
+    data: () => ({
+      itemsIn: [],
+      itemsOut: [],
+      tokenIn: "",
+      tokenOut: "",
+      // lastTokenIn: "",
+      // lastTokenOut: ""
+    }),
+    methods: {
+      async initTokenList(currentProvider) {
+        TokenListService.initService(currentProvider);
+        let pairLength = await TokenListService.allPairsLength();
+
+        let task = [];
+        for (let i = 0; i < pairLength; i++) {
+          task.push(TokenListService.allPairs(i));
+        }
+        let pairs = await Promise.all(task);
+        task = [];
+        pairs.map((o) => {
+          task.push(TokenListService.getToken(o))
+        })
+
+        let tokens = await Promise.all(task);
+        let tokenAddrList = [];
+
+        tokens.map((o) => {
+          tokenAddrList = tokenAddrList.concat(o);
+        })
+        tokenAddrList= Array.from(new Set(tokenAddrList));
+        this.items = tokenAddrList;
+
+        let tokenList = await TokenListService.erc20Info(tokenAddrList);
+
+        let optionList = tokenList.map((o, i) => {return { text: o.symbol, value: i, disabled: false}});
+
+        this.itemsIn = optionList;
+        this.itemsOut = optionList;
+
+      },
+      changeTokenIn(e) {
+        this.itemsOut.map((o) => o.disabled = false)
+        this.itemsOut[e].disabled = true;
+      },
+      changeTokenOut(e) {
+        this.itemsIn.map((o) => o.disabled = false)
+        this.itemsIn[e].disabled = true;
+      }
+    }
   }
 </script>

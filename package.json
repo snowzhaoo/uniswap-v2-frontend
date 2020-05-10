@@ -10,7 +10,9 @@
   "dependencies": {
     "core-js": "^3.6.4",
     "vue": "^2.6.11",
-    "vuetify": "^2.2.11"
+    "vue-metamask": "^2.0.1",
+    "vuetify": "^2.2.11",
+    "web3": "^1.2.7"
   },
   "devDependencies": {
     "@mdi/font": "^5.1.45",

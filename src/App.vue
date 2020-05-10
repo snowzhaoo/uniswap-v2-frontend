@@ -1,46 +1,33 @@
 <template>
   <v-app>
-    <!-- <v-app-bar
+    <v-app-bar
       app
       color="primary"
       dark
     >
-      <div class="d-flex align-center">
-        <v-img
-          alt="Vuetify Logo"
-          class="shrink mr-2"
-          contain
-          src="https://cdn.vuetifyjs.com/images/logos/vuetify-logo-dark.png"
-          transition="scale-transition"
-          width="40"
-        />
-
-        <v-img
-          alt="Vuetify Name"
-          class="shrink mt-1 hidden-sm-and-down"
-          contain
-          min-width="100"
-          src="https://cdn.vuetifyjs.com/images/logos/vuetify-name-dark.png"
-          width="100"
-        />
-      </div>
 
       <v-spacer></v-spacer>
 
-      <v-btn
+      <!-- <v-btn
         href="https://github.com/vuetifyjs/vuetify/releases/latest"
         target="_blank"
         text
-      >
-        <span class="mr-2">Latest Release</span>
+      > -->
+        <!-- <span class="mr-2">Latest Release</span>
         <v-icon>mdi-open-in-new</v-icon>
-      </v-btn>
-    </v-app-bar> -->
+      </v-btn> -->
+      <p>({{network}}) {{address}}</p>
+    </v-app-bar>
 
-    <!-- <v-content> -->
+    <vue-metamask 
+        userMessage="msg" 
+        @onComplete="onComplete"
+    >
+    </vue-metamask>
+    <v-content>
       <!-- <HelloWorld/> -->
-    <!-- </v-content> -->
-      <Centered/>
+      <Centered ref="Centered" :web3 = "web3" />
+    </v-content>
 
   </v-app>
 </template>
@@ -48,17 +35,37 @@
 <script>
 // import HelloWorld from './components/HelloWorld';
 import Centered from './components/Centered';
-
-
+import VueMetamask from 'vue-metamask';
 export default {
   name: 'App',
 
   components: {
-    Centered
+    Centered,VueMetamask
   },
 
   data: () => ({
-    //
+    address: '0x0000000000000000000000000000000000000000',
+    network: "",
+    web3: {},
+    msg: "This is demo net work"
   }),
+  methods:{
+    onComplete(data){
+        console.log('data:', data);
+        // console.log(typeof(data.web3))
+        // let web3 = new Web3(data.web3.currentProvider);      
+        this.address = data.metaMaskAddress;
+        this.$refs.Centered.initTokenList(data.web3.currentProvider);
+        // this.web3 = new Web3(data.web3.currentProvider);
+        this.web3 = data.web3;
+        switch (data.netID) {
+          case '1': this.network = 'Main';break;
+          case '3': this.network = 'Ropsten';break;
+          case '4': this.network = 'Rinkeby';break;
+          case '5': this.network = 'Goerli';break;
+          case '42': this.network = 'Kovan';break;
+        }
+    }
+  }
 };
 </script>
