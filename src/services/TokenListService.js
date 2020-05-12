@@ -4,10 +4,11 @@ const abi = require(`@/abi/UniswapV2.json`)
 
 let web3 = null;
 let factory = null;
-
+// let router = null;
 export function initService(provider) {
     web3 = new Web3(provider);      
     factory = new web3.eth.Contract(abi.factory, "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f");
+    // router = new web3.eth.Contract(abi.router, "0xf164fC0Ec4E93095b804a4795bBe1e041497b92a");
 }
 
 export async function allPairsLength() {
@@ -39,3 +40,9 @@ export async function erc20Info(tokenList) {
 
     return await Promise.all(task);
 }
+
+// export async function factorytest() {
+//     // let router = new web3.eth.Contract(abi.router, "0xf164fC0Ec4E93095b804a4795bBe1e041497b92a");
+//     let f = await router.methods.factory().call();
+//     console.log(f);
+// }

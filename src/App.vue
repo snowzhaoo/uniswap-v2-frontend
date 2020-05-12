@@ -56,6 +56,7 @@ export default {
         // let web3 = new Web3(data.web3.currentProvider);      
         this.address = data.metaMaskAddress;
         this.$refs.Centered.initTokenList(data.web3.currentProvider);
+        this.$refs.Centered.init(data);
         // this.web3 = new Web3(data.web3.currentProvider);
         this.web3 = data.web3;
         switch (data.netID) {
