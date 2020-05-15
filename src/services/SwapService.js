@@ -21,3 +21,13 @@ export async function approve(tokenAddr, spender, amount) {
     let token = new web3.eth.Contract(abi.erc20, tokenAddr);
     await token.methods.approve(spender, amount).send({from: this.data.metaMaskAddress});
 }
+export async function allowance(tokenAddr, spender) {
+    let token = new web3.eth.Contract(abi.erc20, tokenAddr);
+    return await token.methods.allowance(this.data.metaMaskAddress, spender).call();
+}
+export async function getAmountsOut(amountIn, path) {
+    return await router.methods.getAmountsOut(amountIn, path).call();
+}
+export async function getAmountsIn(amountIn, path) {
+    return await router.methods.getAmountsIn(amountIn, path).call();
+}

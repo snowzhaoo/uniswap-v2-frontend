@@ -19,8 +19,10 @@
                 <v-spacer></v-spacer>
                 <v-tooltip>
 
-                  <template v-slot:activator="{ on }">
-                      <v-switch v-model="enable" @change="approve" :label="enable ? 'enabled': 'enable\u3000'" v-on="on"></v-switch>
+                  <template  v-slot:activator="{ on }">
+
+                      <v-switch v-show="seen" v-model="enable" @change="approve" :label="enable ? 'enabled': 'enable\u3000'" v-on="on"></v-switch>
+
                   </template>
 
                 </v-tooltip>
@@ -38,6 +40,7 @@
                           name="tokenIn"
                           prepend-icon="mdi-import"
                           type="number"
+                          @input="changeAmountIn"
                         ></v-text-field>
                       </v-col>
 
@@ -60,6 +63,7 @@
                             name="tokenOut"
                             prepend-icon="mdi-export"
                             type="number"
+                            @input="changeAmountOut"
                           ></v-text-field>
                       </v-col>
 
@@ -94,8 +98,10 @@
 <script>
 import * as TokenListService from '@/services/TokenListService.js';
 import * as SwapService from '@/services/SwapService.js';
+import Web3 from 'web3';
+const BN = Web3.utils.BN;
 // const abi = require(`@/abi/UniswapV2.json`)
-
+// import Big from 'big.js';
   export default {
     name: 'Centered',
     props: {
@@ -156,10 +162,30 @@ import * as SwapService from '@/services/SwapService.js';
 
         console.log("init end");
       },
-      changeTokenIn(e) {
+      async changeAmountIn(e) {
+        let tokenInAddr = this.tokenList[this.tokenIn]['address']
+        let tokenOutAddr = this.tokenList[this.tokenOut]['address']
+        let amount = await SwapService.getAmountsOut(Web3.utils.toWei(e, 'ether'), [tokenInAddr, tokenOutAddr]);
+        console.log(amount)
+        this.amountOut = Web3.utils.toWei(amount[1], 'ether');
+      },
+      async changeAmountOut(e) {
+        let tokenInAddr = this.tokenList[this.tokenIn]['address']
+        let tokenOutAddr = this.tokenList[this.tokenOut]['address']
+        // let amountIn = new BN(e);
+        // console.log(amountIn.multiply(10))
+        let amount = await SwapService.getAmountsIn(Web3.utils.toWei(e, 'ether'), [tokenInAddr, tokenOutAddr]);
+        console.log(amount)
+        this.amountIn = Web3.utils.fromWei(amount[0], 'ether');
+      },
+      async changeTokenIn(e) {
         this.itemsOut.map((o) => o.disabled = false);
         this.itemsOut[e].disabled = true;
-        // this.seen = true;
+        //get allowance
+        let allowance = new BN(await SwapService.allowance(this.tokenList[this.tokenIn]['address'], "0xf164fC0Ec4E93095b804a4795bBe1e041497b92a")) 
+        this.enable = !allowance.eq(0);
+        this.seen = true;
+
       },
       changeTokenOut(e) {
         this.itemsIn.map((o) => o.disabled = false)
@@ -174,18 +200,18 @@ import * as SwapService from '@/services/SwapService.js';
         console.log(tokenInAddr)
         console.log(tokenOutAddr)
 
-        // console.log(this.amountIn)
-        // console.log(this.amountOut)
-        // await SwapService.approve(tokenInAddr, "0xf164fC0Ec4E93095b804a4795bBe1e041497b92a", this.amountIn);
-        // await SwapService.swapExactTokensForTokens(this.amountIn,1, [tokenInAddr, tokenOutAddr], "0x9e9066DF82fA9907A384778Ab65B001ceD42BD1E")
+        await SwapService.swapExactTokensForTokens(this.amountIn,1, [tokenInAddr, tokenOutAddr], "0x9e9066DF82fA9907A384778Ab65B001ceD42BD1E")
 
 
       },
+
       async approve() {
-        console.log(this.tokenList[this.tokenIn]['address'])
         let tokenInAddr = this.tokenList[this.tokenIn]['address']; 
-        // let tokenInAddr = this.tokenList[this.tokenIn]['address']
-        await SwapService.approve(tokenInAddr, "0xf164fC0Ec4E93095b804a4795bBe1e041497b92a", "115792089237316195423570985008687907853269984665640564039457584007913129639935");
+        if (this.enable) {
+          await SwapService.approve(tokenInAddr, "0xf164fC0Ec4E93095b804a4795bBe1e041497b92a", "115792089237316195423570985008687907853269984665640564039457584007913129639935");
+        } else {
+          await SwapService.approve(tokenInAddr, "0xf164fC0Ec4E93095b804a4795bBe1e041497b92a", "0");
+        }
         // console.log(this.enable)
       }
     }
