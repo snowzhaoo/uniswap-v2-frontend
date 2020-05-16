@@ -8,8 +8,10 @@
     "lint": "vue-cli-service lint"
   },
   "dependencies": {
+    "@uniswap/sdk": "^2.0.5",
     "big.js": "^5.2.2",
     "core-js": "^3.6.4",
+    "jsbi": "^3.1.2",
     "vue": "^2.6.11",
     "vue-metamask": "^2.0.1",
     "vuetify": "^2.2.11",
@@ -47,5 +49,17 @@
     "> 1%",
     "last 2 versions",
     "not dead"
-  ]
+  ],
+  "description": "## Project setup ``` npm install ```",
+  "main": "babel.config.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/snowzhaoo/uniswap-v2-frontend.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/snowzhaoo/uniswap-v2-frontend/issues"
+  },
+  "homepage": "https://github.com/snowzhaoo/uniswap-v2-frontend#readme"
 }

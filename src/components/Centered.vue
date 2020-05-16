@@ -3,16 +3,16 @@
     <v-content>
       <v-container class="fill-height" fluid>
 
-        <v-row align="center" justify="center">
+        <!-- <v-row align="center" justify="center">
           <v-col cols="12" sm="8" md="4"> 
               <v-alert type="warning">
                 Please enable the token first
               </v-alert>
           </v-col>
-        </v-row>
+        </v-row> -->
         <v-row align="center" justify="center">
 
-          <v-col cols="12" sm="8" md="4" >
+          <v-col cols="12" sm="8" md="6" >
             <v-card class="elevation-12">
               <v-toolbar color="primary" dark flat>
                 <v-toolbar-title>Token Swap</v-toolbar-title>
@@ -98,8 +98,13 @@
 <script>
 import * as TokenListService from '@/services/TokenListService.js';
 import * as SwapService from '@/services/SwapService.js';
+import * as UniswapV2Service from '@/services/UniswapV2Service.js';
 import Web3 from 'web3';
+import Big from 'big.js';
 const BN = Web3.utils.BN;
+// import { ChainId, Token, TokenAmount, Pair, Trade,TradeType, Route } from '@uniswap/sdk'
+// import JSBI from 'jsbi'
+
 // const abi = require(`@/abi/UniswapV2.json`)
 // import Big from 'big.js';
   export default {
@@ -119,7 +124,8 @@ const BN = Web3.utils.BN;
       amountOut: "",
       tokenList: [],
       enable: false,
-      seen: false
+      seen: false,
+      tokensDic: Object
       // lastTokenIn: "",
       // lastTokenOut: ""
     }),
@@ -139,44 +145,103 @@ const BN = Web3.utils.BN;
           task.push(TokenListService.allPairs(i));
         }
         let pairs = await Promise.all(task);
+
         task = [];
         pairs.map((o) => {
           task.push(TokenListService.getToken(o))
         })
 
         let tokens = await Promise.all(task);
+      
+        console.log(tokens)
+
+
         let tokenAddrList = [];
 
         tokens.map((o) => {
-          tokenAddrList = tokenAddrList.concat(o);
+          o.map((j,i) => {
+            if (i < 2) {
+              tokenAddrList.push(j)
+            }
+          })
         })
         tokenAddrList= Array.from(new Set(tokenAddrList));
+
+        // console.log(tokenAddrList)
         this.items = tokenAddrList;
 
         this.tokenList = await TokenListService.erc20Info(tokenAddrList);
 
-        let optionList = this.tokenList.map((o, i) => {return { text: o.symbol, value: i, disabled: false}});
+        // let tokensDic = {};
+        let optionList = this.tokenList.map((o, i) => {
+
+          this.tokensDic[o.address] = {
+            decimals: o.decimals,
+            name: o.name,
+            symbol: o.symbol
+          }
+          return { text: o.symbol, value: i, disabled: false}
+        })
+
+        tokens.map((o) => {
+          UniswapV2Service.pairFactory(o, this.tokensDic);
+        })
 
         this.itemsIn = optionList;
         this.itemsOut = optionList;
 
         console.log("init end");
+
       },
       async changeAmountIn(e) {
-        let tokenInAddr = this.tokenList[this.tokenIn]['address']
-        let tokenOutAddr = this.tokenList[this.tokenOut]['address']
-        let amount = await SwapService.getAmountsOut(Web3.utils.toWei(e, 'ether'), [tokenInAddr, tokenOutAddr]);
-        console.log(amount)
-        this.amountOut = Web3.utils.toWei(amount[1], 'ether');
+        if (e > 0) {
+          
+          const tokenIn = this.tokenList[this.tokenIn]['address'];
+          const tokenOut = this.tokenList[this.tokenOut]['address'];
+
+          let amountIn = new Big(e).times(`1e${this.tokensDic[tokenIn]['decimals']}`).toFixed().toString()
+          const result = UniswapV2Service.bestTradeExactIn(tokenIn, amountIn, tokenOut)
+
+          if (result.length == 0) {
+              //error
+          } else {
+
+            //TODO 
+            let path = result[0]['route']['path'];
+            path = path.map((o) => o.address);
+
+            let amount = await SwapService.getAmountsOut(amountIn, path);
+            this.amountOut = new Big(amount[1]).div(`1e${this.tokensDic[tokenOut]['decimals']}`).toFixed().toString();
+
+
+          }
+        } else {
+          this.amountOut = 0;
+        }
+
       },
       async changeAmountOut(e) {
-        let tokenInAddr = this.tokenList[this.tokenIn]['address']
-        let tokenOutAddr = this.tokenList[this.tokenOut]['address']
-        // let amountIn = new BN(e);
-        // console.log(amountIn.multiply(10))
-        let amount = await SwapService.getAmountsIn(Web3.utils.toWei(e, 'ether'), [tokenInAddr, tokenOutAddr]);
-        console.log(amount)
-        this.amountIn = Web3.utils.fromWei(amount[0], 'ether');
+        if (e > 0) {
+
+          const tokenIn = this.tokenList[this.tokenIn]['address'];
+          const tokenOut = this.tokenList[this.tokenOut]['address'];
+          let amountOut = new Big(e).times(`1e${this.tokensDic[tokenOut]['decimals']}`).toFixed().toString();
+          const result = UniswapV2Service.bestTradeExactOut(tokenIn, tokenOut, amountOut);
+
+          if (result.length == 0) {
+              //error
+          } else {
+
+            let path = result[0]['route']['path'];
+            path = path.map((o) => o.address);
+
+            let amount = await SwapService.getAmountsIn(amountOut, path);
+            this.amountIn = new Big(amount[0]).div(`1e${this.tokensDic[tokenIn]['decimals']}`).toFixed().toString();
+          }
+        } else {
+          this.amountIn = 0;
+        }
+
       },
       async changeTokenIn(e) {
         this.itemsOut.map((o) => o.disabled = false);
@@ -192,16 +257,23 @@ const BN = Web3.utils.BN;
         this.itemsIn[e].disabled = true;
       },
       async swap(){
+//DAI 0x4f96fe3b7a6cf9725f59d353f723c1bdb64ca6aa
+//weth 0xd0a1e359811322d97991e03f863a0c30c2cf029c
+//usdc 0x75b0622cec14130172eae9cf166b92e5c112faff
+        let tokenIn = this.tokenList[this.tokenIn]['address']
+        let tokenOut = this.tokenList[this.tokenOut]['address']
+        // console.log(this.tokenList)
+        // console.log(this.tokenIn)
+        // console.log(tokenInAddr)
+        // console.log(tokenOutAddr)
 
-        let tokenInAddr = this.tokenList[this.tokenIn]['address']
-        let tokenOutAddr = this.tokenList[this.tokenOut]['address']
-        console.log(this.tokenList)
-        console.log(this.tokenIn)
-        console.log(tokenInAddr)
-        console.log(tokenOutAddr)
+        // await SwapService.swapExactTokensForTokens(Web3.utils.toWei(this.amountIn, 'ether'),1, [tokenInAddr, tokenOutAddr], "0x9e9066DF82fA9907A384778Ab65B001ceD42BD1E")
 
-        await SwapService.swapExactTokensForTokens(this.amountIn,1, [tokenInAddr, tokenOutAddr], "0x9e9066DF82fA9907A384778Ab65B001ceD42BD1E")
-
+// let result = UniswapV2Service.bestTradeExactOut(tokenIn, tokenOut, 100)
+let result = UniswapV2Service.bestTradeExactIn(tokenIn, 100,tokenOut)
+console.log(result)
+        // await SwapService.swapExactTokensForTokens(Web3.utils.toWei(this.amountIn, 'ether'),1, ["0x4f96fe3b7a6cf9725f59d353f723c1bdb64ca6aa", "0xd0a1e359811322d97991e03f863a0c30c2cf029c", "0x75b0622cec14130172eae9cf166b92e5c112faff"], "0x9e9066DF82fA9907A384778Ab65B001ceD42BD1E")
+        // await SwapService.swapExactTokensForTokens(Web3.utils.toWei(this.amountIn, 'ether'),1, ["0x4f96fe3b7a6cf9725f59d353f723c1bdb64ca6aa", "0x75b0622cec14130172eae9cf166b92e5c112faff"], "0x9e9066DF82fA9907A384778Ab65B001ceD42BD1E")
 
       },
 

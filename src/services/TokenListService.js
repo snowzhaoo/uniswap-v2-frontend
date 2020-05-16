@@ -20,7 +20,7 @@ export async function allPairs(index) {
 }
 export async function getToken(pairAddr){
     let pair = new web3.eth.Contract(abi.pair, pairAddr);
-    return await Promise.all([pair.methods.token0().call(), pair.methods.token1().call()])
+    return await Promise.all([pair.methods.token0().call(), pair.methods.token1().call(), pair.methods.getReserves().call()])
 }
 async function getErc20Info(tokenAddr) {
     let erc20 = new web3.eth.Contract(abi.erc20, tokenAddr)

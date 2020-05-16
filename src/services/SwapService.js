@@ -2,6 +2,7 @@
 import Web3 from 'web3';
 const abi = require(`@/abi/UniswapV2.json`)
 
+
 let web3 = null;
 // let factory = null;
 let router = null;
