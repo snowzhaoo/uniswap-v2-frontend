@@ -1,4 +1,5 @@
 module.exports = {
+    publicPath: '/uniswap-v2-frontend/',
   "transpileDependencies": [
     "vuetify"
   ],

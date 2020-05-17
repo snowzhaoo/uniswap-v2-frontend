@@ -1,12 +1,13 @@
 'use strict';
-import Web3 from 'web3';
+// import Web3 from 'web3';
 const abi = require(`@/abi/UniswapV2.json`)
 
 let web3 = null;
 let factory = null;
 // let router = null;
-export function initService(provider) {
-    web3 = new Web3(provider);      
+export function initService(web3Instance) {
+    // web3 = new Web3(provider);
+    web3 = web3Instance      
     factory = new web3.eth.Contract(abi.factory, "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f");
     // router = new web3.eth.Contract(abi.router, "0xf164fC0Ec4E93095b804a4795bBe1e041497b92a");
 }

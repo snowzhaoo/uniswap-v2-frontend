@@ -1,15 +1,15 @@
 <template>
   <v-app id="inspire">
     <v-content>
-      <v-container class="fill-height" fluid>
+      <v-container fluid>
 
-        <!-- <v-row align="center" justify="center">
-          <v-col cols="12" sm="8" md="4"> 
+        <v-row :style="alertSeen" align="center" justify="center">
+          <v-col cols="12" sm="8" md="6"> 
               <v-alert type="warning">
                 Please enable the token first
               </v-alert>
           </v-col>
-        </v-row> -->
+        </v-row>
         <v-row align="center" justify="center">
 
           <v-col cols="12" sm="8" md="6" >
@@ -32,7 +32,7 @@
 
                   <v-container fluid>
                     <v-row align="center">
-                      <v-col class="d-flex" cols="12" sm="8">
+                      <v-col class="d-flex" cols="12" sm="6">
                         <v-text-field
                           id="input"
                           v-model="amountIn"
@@ -44,7 +44,7 @@
                         ></v-text-field>
                       </v-col>
 
-                      <v-col class="d-flex" cols="12" sm="4">
+                      <v-col class="d-flex" cols="12" sm="6">
                         <v-select
                           id="tokenIn"
                           v-model="tokenIn"
@@ -55,7 +55,7 @@
                         ></v-select>
                       </v-col>
 
-                      <v-col class="d-flex" cols="12" sm="8">
+                      <v-col class="d-flex" cols="12" sm="6">
                           <v-text-field
                             id="ouput"
                             v-model="amountOut"
@@ -67,7 +67,7 @@
                           ></v-text-field>
                       </v-col>
 
-                      <v-col class="d-flex" cols="12" sm="4">
+                      <v-col class="d-flex" cols="12" sm="6">
                         <v-select
                           id="tokenOut"
                           v-model="tokenOut"
@@ -99,14 +99,10 @@
 import * as TokenListService from '@/services/TokenListService.js';
 import * as SwapService from '@/services/SwapService.js';
 import * as UniswapV2Service from '@/services/UniswapV2Service.js';
-import Web3 from 'web3';
+import { truncate } from '@/utils/StringHelper.js';
+// import Web3 from 'web3';
 import Big from 'big.js';
-const BN = Web3.utils.BN;
-// import { ChainId, Token, TokenAmount, Pair, Trade,TradeType, Route } from '@uniswap/sdk'
-// import JSBI from 'jsbi'
-
-// const abi = require(`@/abi/UniswapV2.json`)
-// import Big from 'big.js';
+// const BN = Web3.utils.BN;
   export default {
     name: 'Centered',
     props: {
@@ -116,26 +112,41 @@ const BN = Web3.utils.BN;
       }
     },
     data: () => ({
-      itemsIn: [],
-      itemsOut: [],
-      tokenIn: "",
-      tokenOut: "",
-      amountIn: "",
-      amountOut: "",
+      itemsIn: [{text: "ETH", value:0,disabled: false}],
+      itemsOut: [{text: "ETH", value:0,disabled: false}],
+
+      tokenIn: 0,
+      tokenOut: 0,
+
+      amountIn: 0,
+      amountOut: 0,
+
       tokenList: [],
       enable: false,
       seen: false,
-      tokensDic: Object
-      // lastTokenIn: "",
-      // lastTokenOut: ""
+      tokensDic: Object,
+      exacAmount: '',
+      path: [],
+
+      alertSeen: {visibility: "hidden"},
+
     }),
     methods: {
-      async init(data) {
-        SwapService.initService(data);
-        // TokenListService.initService(data.web3.currentProvider);
+      alert30Seconds() {
+          this.alertSeen = {visibility: "visible"}
+        setTimeout(() => {
+          this.alertSeen = {visibility: "hidden"}
+        }, 1000 * 3)
       },
-      async initTokenList(currentProvider) {
-        TokenListService.initService(currentProvider);
+      // async init(data) {
+      //   SwapService.initService(data);
+        
+      //   // TokenListService.initService(data.web3.currentProvider);
+      // },
+      // async initTokenList(currentProvider) {
+      async initTokenList(web3) {
+        TokenListService.initService(web3);
+        SwapService.initService(web3);
         // SwapService.initService(currentProvider);
 
         let pairLength = await TokenListService.allPairsLength();
@@ -153,7 +164,7 @@ const BN = Web3.utils.BN;
 
         let tokens = await Promise.all(task);
       
-        console.log(tokens)
+        // console.log(tokens)
 
 
         let tokenAddrList = [];
@@ -167,22 +178,20 @@ const BN = Web3.utils.BN;
         })
         tokenAddrList= Array.from(new Set(tokenAddrList));
 
-        // console.log(tokenAddrList)
         this.items = tokenAddrList;
 
         this.tokenList = await TokenListService.erc20Info(tokenAddrList);
-
-        // let tokensDic = {};
-        let optionList = this.tokenList.map((o, i) => {
-
+        let optionList = [{text: "ETH", value:0,disabled: false}]
+        let optionTokenList = this.tokenList.map((o, i) => {
           this.tokensDic[o.address] = {
             decimals: o.decimals,
             name: o.name,
             symbol: o.symbol
           }
-          return { text: o.symbol, value: i, disabled: false}
+          return { text: `${o.symbol}\u3000${truncate(o.address, 13, 12, 3)}`, value: ++i, disabled: false}
         })
-
+        optionList = optionList.concat(optionTokenList);
+      console.log(optionList)
         tokens.map((o) => {
           UniswapV2Service.pairFactory(o, this.tokensDic);
         })
@@ -195,7 +204,9 @@ const BN = Web3.utils.BN;
       },
       async changeAmountIn(e) {
         if (e > 0) {
-          
+
+          // console.log("hello") 
+          // console.log(this.tokenOut) 
           const tokenIn = this.tokenList[this.tokenIn]['address'];
           const tokenOut = this.tokenList[this.tokenOut]['address'];
 
@@ -205,14 +216,13 @@ const BN = Web3.utils.BN;
           if (result.length == 0) {
               //error
           } else {
-
             //TODO 
             let path = result[0]['route']['path'];
-            path = path.map((o) => o.address);
+            this.path = path.map((o) => o.address);
 
-            let amount = await SwapService.getAmountsOut(amountIn, path);
+            let amount = await SwapService.getAmountsOut(amountIn, this.path);
             this.amountOut = new Big(amount[1]).div(`1e${this.tokensDic[tokenOut]['decimals']}`).toFixed().toString();
-
+            this.exacAmount = 'in';
 
           }
         } else {
@@ -233,10 +243,12 @@ const BN = Web3.utils.BN;
           } else {
 
             let path = result[0]['route']['path'];
-            path = path.map((o) => o.address);
+            this.path = path.map((o) => o.address);
 
-            let amount = await SwapService.getAmountsIn(amountOut, path);
+            let amount = await SwapService.getAmountsIn(amountOut, this.path);
             this.amountIn = new Big(amount[0]).div(`1e${this.tokensDic[tokenIn]['decimals']}`).toFixed().toString();
+            this.exacAmount = 'out';
+
           }
         } else {
           this.amountIn = 0;
@@ -247,33 +259,40 @@ const BN = Web3.utils.BN;
         this.itemsOut.map((o) => o.disabled = false);
         this.itemsOut[e].disabled = true;
         //get allowance
-        let allowance = new BN(await SwapService.allowance(this.tokenList[this.tokenIn]['address'], "0xf164fC0Ec4E93095b804a4795bBe1e041497b92a")) 
+        let allowance = new Big(await SwapService.allowance(this.tokenList[this.tokenIn]['address'], "0xf164fC0Ec4E93095b804a4795bBe1e041497b92a")) 
         this.enable = !allowance.eq(0);
-        this.seen = true;
 
+        this.seen = this.tokenIn == 0 ? false: true;
+        this.amountIn = 0;
+        this.amountOut = 0;
       },
       changeTokenOut(e) {
         this.itemsIn.map((o) => o.disabled = false)
         this.itemsIn[e].disabled = true;
+        this.amountIn = 0;
+        this.amountOut = 0;
       },
       async swap(){
-//DAI 0x4f96fe3b7a6cf9725f59d353f723c1bdb64ca6aa
-//weth 0xd0a1e359811322d97991e03f863a0c30c2cf029c
-//usdc 0x75b0622cec14130172eae9cf166b92e5c112faff
-        let tokenIn = this.tokenList[this.tokenIn]['address']
-        let tokenOut = this.tokenList[this.tokenOut]['address']
-        // console.log(this.tokenList)
-        // console.log(this.tokenIn)
-        // console.log(tokenInAddr)
-        // console.log(tokenOutAddr)
 
-        // await SwapService.swapExactTokensForTokens(Web3.utils.toWei(this.amountIn, 'ether'),1, [tokenInAddr, tokenOutAddr], "0x9e9066DF82fA9907A384778Ab65B001ceD42BD1E")
+        let allowance = new Big(await SwapService.allowance(this.tokenList[this.tokenIn]['address'], "0xf164fC0Ec4E93095b804a4795bBe1e041497b92a")) 
+        if (allowance.eq(0)) {
+          this.alert30Seconds()
+        } else {
 
-// let result = UniswapV2Service.bestTradeExactOut(tokenIn, tokenOut, 100)
-let result = UniswapV2Service.bestTradeExactIn(tokenIn, 100,tokenOut)
-console.log(result)
-        // await SwapService.swapExactTokensForTokens(Web3.utils.toWei(this.amountIn, 'ether'),1, ["0x4f96fe3b7a6cf9725f59d353f723c1bdb64ca6aa", "0xd0a1e359811322d97991e03f863a0c30c2cf029c", "0x75b0622cec14130172eae9cf166b92e5c112faff"], "0x9e9066DF82fA9907A384778Ab65B001ceD42BD1E")
-        // await SwapService.swapExactTokensForTokens(Web3.utils.toWei(this.amountIn, 'ether'),1, ["0x4f96fe3b7a6cf9725f59d353f723c1bdb64ca6aa", "0x75b0622cec14130172eae9cf166b92e5c112faff"], "0x9e9066DF82fA9907A384778Ab65B001ceD42BD1E")
+          let tokenIn = this.tokenList[this.tokenIn]['address']
+          let tokenOut = this.tokenList[this.tokenOut]['address']
+
+          switch (this.exacAmount) {
+            case 'in' : {
+              let amountIn = new Big(this.amountIn).times(`1e${this.tokensDic[tokenIn]['decimals']}`).toFixed().toString()
+              await SwapService.swapExactTokensForTokens(amountIn, 1, this.path, "0x9e9066DF82fA9907A384778Ab65B001ceD42BD1E")
+            }break;
+            case 'out': {
+            let amountOut = new Big(this.amountOut).times(`1e${this.tokensDic[tokenOut]['decimals']}`).toFixed().toString();
+            await SwapService.swapTokensForExactTokens(amountOut, new Big(this.amountIn).times(1.1).toFixed().toString(), this.path, "0x9e9066DF82fA9907A384778Ab65B001ceD42BD1E")
+            }break;
+          }
+        }
 
       },
 

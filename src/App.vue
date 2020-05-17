@@ -6,6 +6,11 @@
       dark
     >
 
+      <vue-metamask 
+          userMessage="msg" 
+          @onComplete="onComplete"
+      >
+      </vue-metamask>
       <v-spacer></v-spacer>
 
       <!-- <v-btn
@@ -16,15 +21,10 @@
         <!-- <span class="mr-2">Latest Release</span>
         <v-icon>mdi-open-in-new</v-icon>
       </v-btn> -->
-      <p>({{network}}) {{address}}</p>
+      <p id="address">({{network}}) {{address}}</p>
     </v-app-bar>
 
-    <vue-metamask 
-        userMessage="msg" 
-        @onComplete="onComplete"
-    >
-    </vue-metamask>
-    <v-content>
+    <v-content id="main">
       <!-- <HelloWorld/> -->
       <Centered ref="Centered" :web3 = "web3" />
     </v-content>
@@ -36,6 +36,8 @@
 // import HelloWorld from './components/HelloWorld';
 import Centered from './components/Centered';
 import VueMetamask from 'vue-metamask';
+import Web3 from 'web3';
+
 export default {
   name: 'App',
 
@@ -53,10 +55,13 @@ export default {
     onComplete(data){
         console.log('data:', data);
         // console.log(typeof(data.web3))
-        // let web3 = new Web3(data.web3.currentProvider);      
+        // let web3 = new Web3(data.web3.currentProvider);    
+        let web3 = new Web3(data.web3.currentProvider);      
+  
         this.address = data.metaMaskAddress;
-        this.$refs.Centered.initTokenList(data.web3.currentProvider);
-        this.$refs.Centered.init(data);
+        this.$refs.Centered.initTokenList(web3);
+        // this.$refs.Centered.init(data);
+        
         // this.web3 = new Web3(data.web3.currentProvider);
         this.web3 = data.web3;
         switch (data.netID) {
@@ -70,3 +75,12 @@ export default {
   }
 };
 </script>
+
+<style scoped>
+#address {
+  margin-bottom: 0px;
+}
+#main {
+  margin-top: 64px;
+}
+</style>
