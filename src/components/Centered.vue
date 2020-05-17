@@ -180,9 +180,10 @@ import Big from 'big.js';
 
         this.items = tokenAddrList;
 
-        this.tokenList = await TokenListService.erc20Info(tokenAddrList);
+        let tokenList = await TokenListService.erc20Info(tokenAddrList);
+
         let optionList = [{text: "ETH", value:0,disabled: false}]
-        let optionTokenList = this.tokenList.map((o, i) => {
+        let optionTokenList = tokenList.map((o, i) => {
           this.tokensDic[o.address] = {
             decimals: o.decimals,
             name: o.name,
@@ -190,6 +191,8 @@ import Big from 'big.js';
           }
           return { text: `${o.symbol}\u3000${truncate(o.address, 13, 12, 3)}`, value: ++i, disabled: false}
         })
+        
+        this.tokenList = [{address: "0xd0A1E359811322d97991E03f863a0C30C2cF029C", decimals: "18", name: "Wrapped Ether", symbol: "WETH"}].concat(tokenList)
         optionList = optionList.concat(optionTokenList);
       console.log(optionList)
         tokens.map((o) => {
@@ -221,6 +224,7 @@ import Big from 'big.js';
             this.path = path.map((o) => o.address);
 
             let amount = await SwapService.getAmountsOut(amountIn, this.path);
+            console.log(amount)
             this.amountOut = new Big(amount[1]).div(`1e${this.tokensDic[tokenOut]['decimals']}`).toFixed().toString();
             this.exacAmount = 'in';
 
